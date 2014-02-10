@@ -38,7 +38,7 @@ class WatcherActor extends Actor {
   def receive = {
     case path: String =>
       val to = sender
-      start(Paths.get(path)) { case evt =>
+      start(Paths.get(path)) { evt =>
         println(s"$evt => $to")
         to ! evt
       }
