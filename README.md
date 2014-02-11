@@ -3,7 +3,7 @@ watcher
 
 Sample watchService test with scala and akka
 
-I know that the tests fail, that's the reason why I'm posting this :)
+The tests are very unstable, that's the reason why I'm posting this. See http://stackoverflow.com/questions/21675323/java7-watcheservice-events-not-receiving
 
 Consider the following outputs:
 
@@ -26,32 +26,27 @@ watcher.WatcherMain
 
     ENTRY_DELETE
 
-watcher.WatcherSpec "outside akka"
-----------------------------------
-
-### on touch file:
+"randomly" in the tests, I get an extra MODIFY event
+----------------------------------------------------
 
     take...
     ENTRY_CREATE
-    take...
-
-### on touch again (modify)
-
-    ENTRY_MODIFY
+    (ENTRY_CREATE,file2-5811774905980517765) => Actor[akka://WatcherSpec/system/testActor1#-1564059626]
     take...
     ENTRY_MODIFY
+    (ENTRY_MODIFY,file2-5811774905980517765) => Actor[akka://WatcherSpec/system/testActor1#-1564059626]
     take...
-
-### on touch delete
-
+    ENTRY_MODIFY
+    (ENTRY_MODIFY,file2-5811774905980517765) => Actor[akka://WatcherSpec/system/testActor1#-1564059626]
+    take...
+    ENTRY_MODIFY
+    (ENTRY_MODIFY,file2-5811774905980517765) => Actor[akka://WatcherSpec/system/testActor1#-1564059626]
+    take...
     ENTRY_DELETE
-
-watcher.WatcherSpec "inside akka"
----------------------------------
-
-### on touch file:
-
+    (ENTRY_DELETE,file2-5811774905980517765) => Actor[akka://WatcherSpec/system/testActor1#-1564059626]
     take...
-
-and nothing else :(
+    [info] WatcherSpec:
+    [info] - outside akka
+    [info] - in akka *** FAILED ***
+    [info]   java.lang.AssertionError: assertion failed: expected (ENTRY_DELETE,file2-5811774905980517765), found (ENTRY_MODIFY,file2-5811774905980517765)
 
