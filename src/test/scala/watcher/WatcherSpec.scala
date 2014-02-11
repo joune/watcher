@@ -21,10 +21,10 @@ class WatcherSpec extends TestKit(ActorSystem("WatcherSpec"))
 
   override def afterAll(): Unit = system.shutdown
 
-  val dir = Files.createTempDirectory(Paths.get("target"), "test-")
-
   test("outside akka") {
     import Watcher._
+    val dir = Files.createTempDirectory(Paths.get("target"), "test1-")
+
     var events = List[(String,Path)]()
     val c = Promise[String]()
     val d = Promise[String]()
@@ -33,12 +33,13 @@ class WatcherSpec extends TestKit(ActorSystem("WatcherSpec"))
       if (evt._1 == "ENTRY_CREATE") c success evt._1
       if (evt._1 == "ENTRY_DELETE") d success evt._1
     }
-    val f = Files.createTempFile(dir, "file-", "")
+    val f = Files.createTempFile(dir, "file1-", "")
+    Files.write(f, "new".getBytes)
     var expected = List(("ENTRY_CREATE",f.getFileName))
     expected = List(("ENTRY_MODIFY",f.getFileName)) ::: expected
     Thread.sleep(100)
-    assert(expected === events)
     assert(Await.result(c.future, 1 seconds) == "ENTRY_CREATE")
+    assert(expected === events)
     Files.write(f, "modif".getBytes)
     expected = List(("ENTRY_MODIFY",f.getFileName)) ::: expected
     Thread.sleep(100)
@@ -46,20 +47,23 @@ class WatcherSpec extends TestKit(ActorSystem("WatcherSpec"))
     Files.delete(f)
     expected = List(("ENTRY_DELETE",f.getFileName)) ::: expected
     Thread.sleep(100)
-    assert(expected === events)
     assert(Await.result(d.future, 1 seconds) == "ENTRY_DELETE")
+    assert(expected === events)
   }
 
-  test("inside akka") {
-    system.actorOf(Props(new WatcherActor)) ! dir.toString
-    val f = Files.createTempFile(dir, "file-", "")
-    expectMsg(("ENTRY_CREATE",f.getFileName))
-    Files.write(f, "modif".getBytes)
-    expectMsg(("ENTRY_MODIFY",f.getFileName))
-    Files.delete(f)
-    expectMsg(("ENTRY_DELETE",f.getFileName))
-
-  }
+    test("in akka") {
+      val dir = Files.createTempDirectory(Paths.get("target"), "test2-")
+      system.actorOf(Props(new WatcherActor)) ! dir.toString
+      expectNoMsg
+      val f = Files.createTempFile(dir, "file2-", "")
+      expectMsg(("ENTRY_CREATE",f.getFileName))
+      Files.write(f, "new".getBytes)
+      expectMsg(("ENTRY_MODIFY",f.getFileName))
+      Files.write(f, "modif".getBytes)
+      expectMsg(("ENTRY_MODIFY",f.getFileName))
+      Files.delete(f)
+      expectMsg(("ENTRY_DELETE",f.getFileName))
+    }
 
 
 }
